@@ -6,9 +6,7 @@ import (
 	"reflect"
 )
 
-func print(format string, v ...interface{}) {
-	fmt.Printf(format+"\n", v...)
-}
+// =================================================================================
 
 type test_t struct {
 	I           *int32
@@ -137,8 +135,6 @@ func main() {
 		T4: &test4_t{
 			Nice: []uint16{28, 92},
 		},
-
-		notUse: 33,
 	}
 
 	y := x.clone()
@@ -146,6 +142,12 @@ func main() {
 	print("%+v", x)
 	print("%+v", y)
 	print("%#v", reflect.DeepEqual(x, y))
+}
+
+// =================================================================================
+
+func print(format string, v ...interface{}) {
+	fmt.Printf(format+"\n", v...)
 }
 
 func gen(t reflect.Type, varPrefix string, valPrefix string) {
