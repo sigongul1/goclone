@@ -84,6 +84,11 @@ func (pOwn *test4_t) clone() *test4_t {
 }
 
 // =================================================================================
+/*
+TODO:
+	map type
+	nil check
+*/
 
 func main() {
 	// gen(reflect.TypeOf(test_t{}), "r", "pOwn")
