@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 )
 
@@ -17,8 +18,9 @@ type test_t struct {
 	Struct      *test2_t
 	Struct2     test2_t
 	Slice_test3 []test3_t
-	Arr_i32     [5]int32
-	Arr_test3   [7]*test3_t
+	Arr_i32     [2]int32
+	Arr_test3   [1]*test3_t
+	T4          *test4_t
 
 	notUse uint
 }
@@ -27,11 +29,16 @@ type test2_t struct {
 	X  int8
 	Y  float64
 	T3 *test3_t
+	T4 *test4_t
 }
 
 type test3_t struct {
 	Hello string
-	T2    *test2_t
+	T2    *test4_t
+}
+
+type test4_t struct {
+	Nice []uint16
 }
 
 // =================================================================================
@@ -54,60 +61,125 @@ func (pOwn *test_t) clone() *test_t {
 	for i := 0; i < len(pOwn.Arr_test3); i++ {
 		r.Arr_test3[i] = pOwn.Arr_test3[i].clone()
 	}
+	r.T4 = pOwn.T4.clone()
 	return r
 }
-
 func (pOwn *test2_t) clone() *test2_t {
 	r := new(test2_t)
 	r.X = pOwn.X
 	r.Y = pOwn.Y
 	r.T3 = pOwn.T3.clone()
+	r.T4 = pOwn.T4.clone()
 	return r
 }
-
 func (pOwn *test3_t) clone() *test3_t {
 	r := new(test3_t)
 	r.Hello = pOwn.Hello
 	r.T2 = pOwn.T2.clone()
 	return r
 }
+func (pOwn *test4_t) clone() *test4_t {
+	r := new(test4_t)
+	r.Nice = make([]uint16, len(pOwn.Nice))
+	copy(r.Nice, pOwn.Nice)
+	return r
+}
 
 // =================================================================================
 
 func main() {
-	gen(reflect.TypeOf(test_t{}), "r", "pOwn")
+	// gen(reflect.TypeOf(test_t{}), "r", "pOwn")
+
+	x := &test_t{
+		I:         new(int32),
+		F:         3.14,
+		Str:       "haha",
+		Slice_i64: []int64{3, 7, 8},
+		Struct: &test2_t{
+			X: 10,
+			Y: 20,
+			T3: &test3_t{
+				Hello: "hell",
+				T2: &test4_t{
+					Nice: []uint16{5, 15},
+				},
+			},
+			T4: &test4_t{
+				Nice: []uint16{7, 9},
+			},
+		},
+		Struct2: test2_t{
+			X: 30,
+			Y: 110,
+			T3: &test3_t{
+				Hello: "oli",
+				T2: &test4_t{
+					Nice: []uint16{11, 22},
+				},
+			},
+			T4: &test4_t{
+				Nice: []uint16{78, 12},
+			},
+		},
+		Slice_test3: []test3_t{{
+			Hello: "aaa",
+			T2: &test4_t{
+				Nice: []uint16{88, 77},
+			},
+		}},
+		Arr_i32: [2]int32{1, 2},
+		Arr_test3: [1]*test3_t{{
+			Hello: "bb",
+			T2: &test4_t{
+				Nice: []uint16{55, 34},
+			},
+		}},
+		T4: &test4_t{
+			Nice: []uint16{28, 92},
+		},
+
+		notUse: 33,
+	}
+
+	y := x.clone()
+
+	print("%+v", x)
+	print("%+v", y)
+	print("%#v", reflect.DeepEqual(x, y))
 }
 
 func gen(t reflect.Type, varPrefix string, valPrefix string) {
-	var structTypes []reflect.Type
-	scanStructs(t, &structTypes)
+	structTypes := make(map[reflect.Type]struct{})
+	scanStructs(t, structTypes, nil)
 
-	for _, t := range structTypes {
+	for t := range structTypes {
 		genStruct(t, varPrefix, valPrefix)
 	}
 }
 
-func scanStructs(t reflect.Type, result *[]reflect.Type) {
+func scanStructs(t reflect.Type, result map[reflect.Type]struct{}, tracker []reflect.Type) {
 	switch t.Kind() {
 	case reflect.Struct:
-		for _, v := range *result {
+		for _, v := range tracker {
 			if t == v {
-				return
+				print("ERROR: recursive references")
+				os.Exit(1)
 			}
 		}
+		tracker = append(tracker, t)
+		result[t] = struct{}{}
 
-		*result = append(*result, t)
 		for i := 0; i < t.NumField(); i++ {
 			fld := t.Field(i)
 			if !fld.IsExported() || fld.Anonymous {
 				continue
 			}
 
-			scanStructs(fld.Type, result)
+			scanStructs(fld.Type, result, tracker)
 		}
 
 	case reflect.Ptr, reflect.Slice, reflect.Array, reflect.Map:
-		scanStructs(t.Elem(), result)
+		scanStructs(t.Elem(), result, tracker)
 	}
 }
 
