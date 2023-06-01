@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 )
 
 // =================================================================================
@@ -24,10 +25,21 @@ func print(format string, v ...interface{}) {
 }
 
 func gen(t reflect.Type) {
-	structTypes := make(map[reflect.Type]struct{})
-	scanStructs(t, structTypes, nil)
+	// scan structs
+	structs := make(map[reflect.Type]struct{})
+	scanStructs(t, structs, nil)
 
-	for t := range structTypes {
+	// sort
+	var structTypes []reflect.Type
+	for t := range structs {
+		structTypes = append(structTypes, t)
+	}
+	sort.Slice(structTypes, func(i, j int) bool {
+		return structTypes[i].Name() < structTypes[j].Name()
+	})
+
+	// gen
+	for _, t := range structTypes {
 		genStruct(t, "r", "pOwn", 0, 0)
 	}
 }
@@ -75,7 +87,7 @@ func genStruct(t reflect.Type, varStr string, valStr string, iDepth, kvDepth int
 		)
 	}
 	print("\nreturn %s", varStr)
-	print("}")
+	print("}\n")
 }
 
 func genField(t reflect.Type, varStr string, valStr string, iDepth, kvDepth int) {
